@@ -2,7 +2,7 @@
 
 Luma is a statically typed, compiled programming language designed for systems programming. It combines the low-level control of C with a strong type system and modern safety features that eliminate many common runtime errors.
 
-## Table of Contents
+<!-- ## Table of Contents
 
 - [Language Philosophy](#language-philosophy)
 - [Quick Start](#quick-start)
@@ -27,9 +27,9 @@ Luma is a statically typed, compiled programming language designed for systems p
 - [Standard Library](#standard-library)
 - [Safety Features](#safety-features)
 
----
+--- -->
 
-## Language Philosophy
+<!-- ## Language Philosophy -->
 
 Luma is built on three core principles:
 
@@ -96,67 +96,117 @@ This example shows:
 Luma provides a straightforward type system with both primitive and compound types.
 
 ### Primitive Types
+```
+int      - Signed integer (64-bit)
+float    - Floating point (32-bit)
+double   - Floating point (64-bit)
+bool     - Boolean (1 byte)
+byte     - Single byte (1 byte)
+*byte    - Character pointer / C-style string
+void     - No value (used for function return types and generic pointers)
+```
 
-| Type | Description | Size |
-|------|-------------|------|
-| `int` | Signed integer | 64-bit |
-| `uint` | Unsigned integer | 64-bit | (not yet added)
-| `float` | Floating point | 32-bit |
-| `double` | Floating point | 64-bit |
-| `bool` | Boolean | 1 byte |
-| `byte` | Unicode byteacter| 1 byte |
-| `str` | String | Variable |
+**Note on String Types:**
+- String literals like `"hello"` are of type `*byte` (null-terminated character arrays)
+- All string operations in the standard library use `*byte`
+- There is no separate `str` type in Luma
+
+### Type Modifiers & Operators
+```
+*T       - Pointer type (declares a pointer to type T)
+[T; N]   - Array type (fixed-size array of N elements of type T)
+```
+
+**Pointer Operators:**
+```
+*expr    - Dereference operator (access value pointed to)
+&expr    - Address-of operator (get pointer to value)
+```
+
+**Example:**
+```luma
+let x: int = 42;           // x is an int
+let ptr: *int = &x;        // ptr is a pointer to int, holds address of x
+let value: int = *ptr;     // value is 42 (dereferenced ptr)
+```
 
 ### Enumerations
 
-Enums provide type-safe constants with clean syntax:
-
+Enums provide type-safe constants with underlying integer values:
 ```luma
 const Direction -> enum {
-    North,
-    South,
-    East,
-    West
+    North,    // = 0
+    South,    // = 1
+    East,     // = 2
+    West      // = 3
 };
 
 const current_direction: Direction = Direction::North;
+
+// Can cast to int if needed
+let dir_value: int = cast<int>(Direction::North);  // 0
 ```
 
 ### Structures
 
 Structures group related data with optional access control:
-
 ```luma
 const Point -> struct {
     x: int,
     y: int
 };
 
-// With explicit access modifiers
+// With explicit access modifiers and methods
 const Player -> struct {
 pub:
-    name: str,
+    name: *byte,
     score: int,
 priv:
-    internal_id: uint,
+    internal_id: int,
     
     // Methods can be defined inside structs
-    get_display_name -> fn () str {
-        return name + " (" + str(score) + " pts)";
+    get_info -> fn () void {
+        outputln("Player: ", name, " Score: ", score);
     }
 };
 ```
 
 ### Using Types
-
 ```luma
 const origin: Point = Point { x: 0, y: 0 };
+
 const player: Player = Player { 
     name: "Alice", 
     score: 100,
     internal_id: 12345 
 };
+
+// Access fields
+outputln(origin.x);           // 0
+outputln(player.name);        // Alice
+
+// Call methods
+player.get_info();            // Player: Alice Score: 100
 ```
+
+### Type Compatibility
+```luma
+// Same types
+let x: int = 42;
+let y: int = x;  // OK
+
+// Different types require explicit cast
+let f: float = cast<float>(x);  // OK
+let z: int = f;  // ERROR: must use cast<int>(f)
+
+// Pointer type safety
+let int_ptr: *int = &x;
+let void_ptr: *void = cast<*void>(int_ptr);  // Explicit cast required
+```
+
+See [Type Casting System](#type-casting-system) for full details on conversions.
+
+---
 
 ---
 
@@ -1426,7 +1476,6 @@ Luma's standard library provides essential functionality for systems programming
 ### Module: `math`
 
 Mathematical operations and constants.
-
 ```luma
 @use "math" as math
 
@@ -1435,28 +1484,31 @@ math::PI           // 3.14159...
 math::TWO_PI       // 6.28318...
 math::HALF_PI      // 1.57079...
 
-// Arithmetic
-math::add(x, y)
-math::subtract(x, y)
-math::multiply(x, y)
-math::divide(x, y)
-math::mod(x, y)
-math::power(base, exponent)
+// Basic arithmetic functions
+math::add(x: int, y: int) -> int
+math::subtract(x: int, y: int) -> int
+math::multiply(x: int, y: int) -> int
+math::divide(x: int, y: int) -> int       // Returns 0 on division by zero
+math::mod(x: int, y: int) -> int          // Returns 0 on division by zero
 
 // Min/Max
-math::max_size(a, b)
-math::min_size(a, b)
+math::max_size(a: int, b: int) -> int
+math::min_size(a: int, b: int) -> int
 
-// Trigonometry
-math::sin(angle)
-math::cos(angle)
-math::tan(angle)
-math::sec(angle)
-math::csc(angle)
-math::cot(angle)
+// Power
+math::power(base: double, exponent: int) -> double
+
+// Trigonometry (uses lookup table for performance)
+math::sin(angle: double) -> double        // Angle in radians
+math::cos(x: double) -> double
+math::tan(x: double) -> double
+math::sec(x: double) -> double
+math::csc(x: double) -> double
+math::cot(x: double) -> double
 
 // Other
-math::fib(n, a, b)  // Fibonacci
+math::fib(n: int, a: int, b: int) -> int  // Fibonacci
+math::rand(seed: *int) -> int             // Simple PRNG
 ```
 
 **Example:**
@@ -1467,37 +1519,47 @@ const main -> fn () int {
     let angle: double = math::PI / 4.0;
     let sine: double = math::sin(angle);
     outputln("sin(π/4) = ", sine);
+    
+    let result: int = math::power(2.0, 10);
+    outputln("2^10 = ", result);
+    
     return 0;
 }
 ```
 
+---
+
 ### Module: `memory`
 
 Low-level memory operations.
-
 ```luma
 @use "memory" as mem
 
 // Basic operations
-mem::memcpy(dest, src, n)       // Copy memory
-mem::memcmp(a, b, n)            // Compare memory
-mem::memset(dest, value, n)     // Fill memory
-mem::memmove(dest, src, n)      // Move (handles overlap)
-mem::memzero(dest, n)           // Zero memory
+mem::memcpy(dest: *void, src: *void, n: int) -> *void       // Copy memory
+mem::memcmp(a: *void, b: *void, n: int) -> int              // Compare memory (returns 0 if equal)
+mem::memset(dest: *void, value: int, n: int) -> *void       // Fill memory
+mem::memmove(dest: *void, src: *void, n: int) -> *void      // Move (handles overlap)
+mem::memzero(dest: *void, n: int) -> *void                  // Zero memory
 
 // Search
-mem::memchr(ptr, value, n)      // Find byte
+mem::memchr(ptr: *void, value: int, n: int) -> *void        // Find byte
+mem::memmem(haystack: *void, haystack_len: int, 
+            needle: *void, needle_len: int) -> *void        // Find substring
 
 // Allocation helpers
-mem::calloc(count, size)        // Allocate + zero
-mem::realloc(ptr, new_size)     // Reallocate
+mem::calloc(count: int, size: int) -> *void                 // Allocate + zero (#returns_ownership)
+mem::realloc(ptr: *void, new_size: int) -> *void            // Reallocate (#returns_ownership)
 
 // Utilities
-mem::memswap(a, b, n)           // Swap regions
-mem::memrev(ptr, n)             // Reverse bytes
-mem::memcount(ptr, value, n)    // Count occurrences
-mem::memdup(src, n)             // Duplicate region
-mem::memeq(a, b, n)             // Check equality
+mem::memswap(a: *void, b: *void, n: int) -> void            // Swap regions
+mem::memswapn(a: *void, b: *void, count: int, size: int) -> void  // Swap n elements
+mem::memfill(dest: *void, value: int, size: int, count: int) -> *void  // Fill with pattern
+mem::memrev(ptr: *void, n: int) -> *void                    // Reverse bytes
+mem::memcount(ptr: *void, value: int, n: int) -> int        // Count occurrences
+mem::memdup(src: *void, n: int) -> *void                    // Duplicate region (#returns_ownership)
+mem::memeq(a: *void, b: *void, n: int) -> bool              // Check equality
+mem::align(member_alignments: *int, count: int) -> int      // Calculate alignment
 ```
 
 **Example:**
@@ -1515,30 +1577,47 @@ const main -> fn () int {
 }
 ```
 
+---
+
 ### Module: `string`
 
 String manipulation functions.
-
 ```luma
 @use "string" as string
 
-// Creation
-string::from_byte(c)            // Create string from byte
-string::from_int(n)             // Convert int to string
+// Creation (#returns_ownership)
+string::from_byte(c: byte) -> *byte                         // Create string from byte
+string::from_int(n: int) -> *byte                           // Convert int to string
+string::from_float(f: float, precision: int) -> *byte       // Convert float to string
 
 // Measurement
-string::strlen(s)               // Get length
+string::strlen(s: *byte) -> int                             // Get length
 
 // Comparison
-string::strcmp(s1, s2)          // Compare strings
+string::strcmp(s1: *byte, s2: *byte) -> int                 // Compare strings (returns 0 if equal)
 
 // Search
-string::s_byte(s, c)            // Find byteacter
+string::s_byte(s: *byte, c: int) -> byte                    // Find character (returns '\0' if not found)
 
 // Manipulation
-string::copy(dest, src)         // Copy string
-string::n_copy(dest, src, n)    // Copy n byteacters
-string::cat(dest, s1, s2)       // Concatenate
+string::copy(dest: *byte, src: *byte) -> *byte              // Copy string
+string::n_copy(dest: *byte, src: *byte, n: int) -> *byte    // Copy n characters
+string::cat(dest: *byte, s1: *byte, s2: *byte) -> *byte     // Concatenate
+
+// Conversion
+string::atio(value: *byte) -> int                           // ASCII to integer
+string::int_to_str(num: int, buf: *byte, buf_size: int) -> void  // Int to string (in-place)
+
+// Character classification
+string::is_digit(ch: byte) -> bool                          // Check if digit
+string::is_alpha(ch: byte) -> bool                          // Check if alphabetic
+string::is_alnum(ch: byte) -> bool                          // Check if alphanumeric
+
+// Output
+string::putbyte(c: byte) -> int                             // Output single character
+
+// Large number arithmetic (#returns_ownership)
+string::string_add(num1: *byte, num2: *byte) -> *byte       // Add two numbers as strings
 ```
 
 **Example:**
@@ -1558,10 +1637,128 @@ const main -> fn () int {
 }
 ```
 
+---
+
+### Module: `sys`
+
+Linux system call interface (x86_64 only).
+
+**Platform Warning:** This module only works on x86_64 Linux. It will NOT work on macOS, Windows, ARM, or 32-bit systems.
+```luma
+@use "sys" as sys
+
+// File descriptors
+sys::STDIN, sys::STDOUT, sys::STDERR
+
+// File operations
+sys::read(fd: int, buf: *void, count: int) -> int
+sys::write(fd: int, buf: *void, count: int) -> int
+sys::open(path: *byte, flags: int, mode: int) -> int
+sys::close(fd: int) -> int
+sys::lseek(fd: int, offset: int, whence: int) -> int
+sys::pread(fd: int, buf: *void, count: int, offset: int) -> int
+sys::pwrite(fd: int, buf: *void, count: int, offset: int) -> int
+sys::unlink(path: *byte) -> int
+sys::dup(oldfd: int) -> int
+sys::dup2(oldfd: int, newfd: int) -> int
+sys::pipe(pipefd: *int) -> int
+
+// Directory operations
+sys::mkdir(path: *byte, mode: int) -> int
+sys::rmdir(path: *byte) -> int
+sys::chdir(path: *byte) -> int
+sys::getcwd(buf: *byte, size: int) -> *byte
+
+// Process management
+sys::exit(code: int) -> void
+sys::fork() -> int
+sys::getpid() -> int
+sys::getuid() -> int
+sys::getgid() -> int
+sys::kill(pid: int, sig: int) -> int
+sys::wait4(pid: int, status: *int, options: int, rusage: *void) -> int
+sys::execve(path: *byte, argv: **byte, envp: **byte) -> int
+
+// Memory management
+sys::brk(addr: *void) -> int
+sys::mmap(addr: *void, length: int, prot: int, flags: int, fd: int, offset: int) -> *void
+sys::munmap(addr: *void, length: int) -> int
+
+// Helper functions
+sys::is_error(result: int) -> bool
+sys::get_errno(result: int) -> int
+sys::write_str(fd: int, s: *byte) -> int
+sys::eprint(s: *byte) -> int
+
+// Constants (file flags, permissions, signals, etc.)
+sys::O_RDONLY, sys::O_WRONLY, sys::O_RDWR, sys::O_CREAT, sys::O_TRUNC, sys::O_APPEND
+sys::S_IRUSR, sys::S_IWUSR, sys::S_IXUSR
+sys::MODE_0644, sys::MODE_0755, sys::MODE_0777
+sys::SEEK_SET, sys::SEEK_CUR, sys::SEEK_END
+sys::PROT_READ, sys::PROT_WRITE, sys::PROT_EXEC
+sys::MAP_SHARED, sys::MAP_PRIVATE, sys::MAP_ANONYMOUS
+sys::SIGHUP, sys::SIGINT, sys::SIGTERM, sys::SIGKILL
+sys::EPERM, sys::ENOENT, sys::EACCES, sys::EINVAL
+```
+
+**Example:**
+```luma
+@use "sys" as sys
+
+const main -> fn () int {
+    let fd: int = sys::open("test.txt", sys::O_WRONLY | sys::O_CREAT, sys::MODE_0644);
+    if (sys::is_error(fd)) {
+        sys::eprint("Failed to open file\n");
+        return 1;
+    }
+    defer sys::close(fd);
+    
+    sys::write_str(fd, "Hello, World!\n");
+    return 0;
+}
+```
+
+---
+
+### Module: `io`
+
+High-level I/O operations with formatted output.
+```luma
+@use "io" as io
+
+// Formatted output (similar to printf)
+io::print_int(format: *byte, args: [int; 256]) -> int        // %d for integers
+io::print_str(format: *byte, args: [*byte; 256]) -> int      // %s for strings
+io::print_byte(format: *byte, args: [byte; 256]) -> int      // %c for characters
+io::print_err(format: *byte, args: [int; 256]) -> int        // Print to stderr with %d
+
+// File operations (#returns_ownership)
+io::read_file(path: *byte) -> *byte                          // Read entire file into string
+```
+
+**Example:**
+```luma
+@use "io" as io
+
+const main -> fn () int {
+    io::print_int("The answer is %d\n", [42]);
+    io::print_str("Hello, %s!\n", ["World"]);
+    
+    let content: *byte = io::read_file("data.txt");
+    if (content != cast<*byte>(0)) {
+        defer free(content);
+        outputln(content);
+    }
+    
+    return 0;
+}
+```
+
+---
+
 ### Module: `termfx`
 
 Terminal formatting and colors (ANSI escape codes).
-
 ```luma
 @use "termfx" as fx
 
@@ -1570,25 +1767,27 @@ fx::RED, fx::GREEN, fx::BLUE, fx::YELLOW
 fx::MAGENTA, fx::CYAN, fx::WHITE, fx::BLACK
 
 // Bright colors
-fx::BRIGHT_RED, fx::BRIGHT_GREEN, fx::BRIGHT_BLUE
+fx::BRIGHT_RED, fx::BRIGHT_GREEN, fx::BRIGHT_BLUE, fx::BRIGHT_YELLOW
+fx::BRIGHT_MAGENTA, fx::BRIGHT_CYAN, fx::BRIGHT_WHITE, fx::BRIGHT_BLACK
 
 // Background colors
-fx::BG_RED, fx::BG_GREEN, fx::BG_BLUE
+fx::BG_RED, fx::BG_GREEN, fx::BG_BLUE, fx::BG_YELLOW
+fx::BG_MAGENTA, fx::BG_CYAN, fx::BG_WHITE, fx::BG_BLACK
+fx::BG_BRIGHT_RED, fx::BG_BRIGHT_GREEN, fx::BG_BRIGHT_BLUE
 
 // Text styles
-fx::BOLD, fx::UNDERLINE, fx::ITALIC
+fx::BOLD, fx::DIM, fx::ITALIC, fx::UNDERLINE
+fx::BLINK, fx::INVERT, fx::HIDDEN, fx::STRIKETHROUGH
 
 // Screen control
-fx::CLEAR_SCREEN
-fx::CLEAR_LINE
-fx::CURSOR_HOME
-fx::CURSOR_HIDE
-fx::CURSOR_SHOW
+fx::CLEAR_SCREEN, fx::CLEAR_LINE, fx::CLEAR_TO_EOL, fx::CLEAR_TO_EOS
+fx::CURSOR_HOME, fx::CURSOR_HIDE, fx::CURSOR_SHOW
+fx::SAVE_CURSOR, fx::RESTORE_CURSOR
 
-// Functions
-fx::fg_rgb(r, g, b)          // Custom foreground color
-fx::bg_rgb(r, g, b)          // Custom background color
-fx::move_cursor(row, col)    // Move cursor
+// Functions (#returns_ownership)
+fx::fg_rgb(r: int, g: int, b: int) -> *byte          // Custom foreground color
+fx::bg_rgb(r: int, g: int, b: int) -> *byte          // Custom background color
+fx::move_cursor(row: int, col: int) -> *byte         // Move cursor
 
 // Reset
 fx::RESET
@@ -1603,24 +1802,44 @@ const main -> fn () int {
     output(fx::BOLD, fx::RED, "ERROR: ", fx::RESET);
     outputln("Something went wrong!");
     output(fx::GREEN, "✓ Success", fx::RESET, "\n");
+    
+    let custom_color: *byte = fx::fg_rgb(255, 128, 0);
+    defer free(custom_color);
+    output(custom_color, "Orange text!", fx::RESET, "\n");
+    
     return 0;
 }
 ```
 
+---
+
 ### Module: `terminal`
 
 Interactive terminal input functions.
-
 ```luma
 @use "terminal" as term
 
-term::getch()              // Get single byte (no echo, no enter)
-term::getch_silent()       // Get byte silently
-term::getche()             // Get byte with echo
-term::kbhit()              // Check if key pressed
-term::wait_for_key()       // Wait for any key
-term::clear_input_buffer() // Clear input buffer
-term::getpass(prompt)      // Get password (hidden input)
+// Raw mode control
+term::enable_raw_mode() -> void                      // Enable raw mode (blocking)
+term::disable_raw_mode() -> void                     // Restore normal mode
+
+// Character input
+term::getch() -> byte                                // Get single character (no echo, no enter)
+term::getch_raw() -> byte                            // Get character in raw mode
+term::getch_silent() -> byte                         // Get character silently
+term::getche() -> byte                               // Get character with echo
+
+// Input utilities
+term::kbhit() -> int                                 // Check if key pressed (non-blocking)
+term::wait_for_key() -> void                         // Wait for any key
+term::clear_input_buffer() -> void                   // Clear input buffer
+term::get_line(prompt: *byte, buffer: *byte, size: int) -> void  // Read line of input
+
+// Password input (#returns_ownership)
+term::getpass(prompt: *byte) -> *byte                // Get password (hidden input)
+
+// Timing
+term::sleep_ms(ms: int) -> void                      // Sleep for milliseconds
 ```
 
 **Example:**
@@ -1631,7 +1850,10 @@ term::getpass(prompt)      // Get password (hidden input)
 const main -> fn () int {
     outputln("Press any key...");
     let key: byte = term::getch();
-    outputln("You pressed: ", string::from_byte(key));
+    
+    let key_str: *byte = string::from_byte(key);
+    defer free(key_str);
+    outputln("You pressed: ", key_str);
     
     let password: *byte = term::getpass("Enter password: ");
     defer free(password);
@@ -1640,6 +1862,160 @@ const main -> fn () int {
     return 0;
 }
 ```
+
+---
+
+### Module: `time`
+
+Time and timing operations.
+```luma
+@use "time" as time
+
+// Types
+time::TimeSpec -> struct { sec: int, nsec: int }
+time::Timer -> struct { start_time: TimeSpec }
+
+// Constants
+time::CLOCK_REALTIME
+
+// Time operations
+time::now() -> TimeSpec                              // Get current time
+time::clock_gettime(clk_id: int, ts: *TimeSpec) -> int
+time::usleep(usec: int) -> int                       // Sleep microseconds
+
+// Conversions
+time::to_millis(t: TimeSpec) -> int
+time::to_micros(t: TimeSpec) -> int
+time::to_nanos(t: TimeSpec) -> int
+
+// Timer operations
+time::timer_start() -> Timer                         // Start timer
+time::timer_elapsed_ms(t: Timer) -> int              // Get elapsed milliseconds
+time::elapsed_ms(start: TimeSpec, end: TimeSpec) -> int
+time::timespec_sub(a: TimeSpec, b: TimeSpec) -> TimeSpec
+```
+
+**Example:**
+```luma
+@use "time" as time
+
+const main -> fn () int {
+    let timer: time::Timer = time::timer_start();
+    
+    // Do some work...
+    time::usleep(1000000);  // Sleep 1 second
+    
+    let elapsed: int = time::timer_elapsed_ms(timer);
+    outputln("Elapsed: ", elapsed, " ms");
+    
+    return 0;
+}
+```
+
+---
+
+### Module: `vector`
+
+Dynamic array implementation.
+```luma
+@use "vector" as vector
+
+// Type
+vector::Vector -> struct {
+    data: *void,
+    capacity: int,
+    size: int,
+    element_size: int,
+    
+    // Methods
+    push_back(elem: *void) -> void
+    pop_back(out: *void) -> int
+    insert(elem: *void, index: int) -> int
+    remove_at(index: int) -> int
+    get(index: int) -> *void
+}
+
+// Creation (#returns_ownership)
+vector::create_vector(element_size: int) -> Vector
+vector::create_vector_capacity(init_capacity: int, element_size: int) -> Vector
+
+// Cleanup (#takes_ownership)
+vector::free_vector(v: *Vector) -> void
+```
+
+**Example:**
+```luma
+@use "vector" as vector
+
+const main -> fn () int {
+    let v: vector::Vector = vector::create_vector(sizeof<int>);
+    defer vector::free_vector(&v);
+    
+    loop [i: int = 0](i < 10) : (++i) {
+        v.push_back(cast<*void>(&i));
+    }
+    
+    let val: int;
+    v.pop_back(cast<*void>(&val));
+    outputln("Popped: ", val);
+    
+    return 0;
+}
+```
+
+---
+
+### Module: `arena`
+
+Arena allocator for fast bulk allocations.
+```luma
+@use "arena" as arena
+
+// Type
+arena::Arena -> struct {
+    buf: *byte,
+    buf_len: int,
+    prev_offset: int,
+    curr_offset: int,
+}
+
+// Constants
+arena::ARENA_DEFAULT_SIZE  // 1 MB
+
+// Creation (#returns_ownership)
+arena::create_arena() -> Arena
+arena::create_arena_sized(size: int) -> Arena
+
+// Operations
+arena::alloc_arena(a: *Arena, size: int) -> *void
+arena::reset_arena(a: *Arena) -> void
+
+// Cleanup (#takes_ownership)
+arena::free_arena(a: *Arena) -> void
+```
+
+**Example:**
+```luma
+@use "arena" as arena
+
+const main -> fn () int {
+    let a: arena::Arena = arena::create_arena();
+    defer arena::free_arena(&a);
+    
+    // Allocate many small objects quickly
+    loop [i: int = 0](i < 1000) : (++i) {
+        let ptr: *int = cast<*int>(arena::alloc_arena(&a, sizeof<int>));
+        *ptr = i;
+    }
+    
+    // Reset for reuse (doesn't free memory)
+    arena::reset_arena(&a);
+    
+    return 0;
+}
+```
+
+---
 
 ### Creating Your Own Modules
 
@@ -1668,7 +2044,6 @@ pub const VERSION: int = 1;
 ```luma
 // File: main.lx
 @module "main"
-
 @use "mymodule" as mm
 
 const main -> fn () int {
