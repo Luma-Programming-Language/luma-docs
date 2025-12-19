@@ -1,3 +1,4 @@
+// Register custom Luma language for syntax highlighting
 if (typeof hljs !== 'undefined') {
     hljs.registerLanguage('luma', function(hljs) {
         return {
@@ -81,8 +82,56 @@ marked.setOptions({
 
 // Auto-load docs.md on page load
 window.addEventListener('DOMContentLoaded', () => {
-    loadFromUrl('docs.md');
+    // Get the base path (works for both local and GitHub Pages)
+    const basePath = window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1);
+    
+    // Try multiple possible locations
+    const possiblePaths = [
+        basePath + 'docs.md',
+        basePath + 'DOCS.md',
+        basePath + 'README.md',
+        './docs.md',
+        'docs.md',
+        '../docs.md'
+    ];
+    
+    tryLoadMarkdown(possiblePaths, 0);
 });
+
+async function tryLoadMarkdown(paths, index) {
+    if (index >= paths.length) {
+        document.getElementById('content').innerHTML = `
+            <div style="padding: 2rem; text-align: center;">
+                <h2 style="color: #f85149;">❌ Documentation file not found</h2>
+                <p style="color: var(--text-secondary); margin: 1rem 0;">
+                    Tried looking for markdown file in multiple locations.
+                </p>
+                <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top: 1rem;">
+                    Current URL: <code>${window.location.href}</code>
+                </p>
+                <p style="color: var(--text-secondary); font-size: 0.9rem;">
+                    Make sure <code>docs.md</code> is in the same directory as <code>index.html</code>
+                </p>
+            </div>
+        `;
+        return;
+    }
+    
+    try {
+        const response = await fetch(paths[index]);
+        if (response.ok) {
+            const markdown = await response.text();
+            parseAndRenderMarkdown(markdown);
+            console.log(`Successfully loaded: ${paths[index]}`);
+            return;
+        }
+    } catch (error) {
+        console.log(`Failed to load: ${paths[index]}`);
+    }
+    
+    // Try next path
+    tryLoadMarkdown(paths, index + 1);
+}
 
 async function loadFromUrl(url) {
     const contentDiv = document.getElementById('content');
