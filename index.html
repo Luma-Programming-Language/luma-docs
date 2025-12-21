@@ -15,6 +15,14 @@
             <span>⚡</span>
             <span>Luma</span>
         </div>
+        <div class="header-nav">
+            <button class="nav-btn active" onclick="showDocs()">Documentation</button>
+            <button class="nav-btn" onclick="showStdLib()">Standard Library</button>
+        </div>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Search documentation..." class="search-input">
+            <div id="searchResults" class="search-results"></div>
+        </div>
         <div class="header-links">
             <a href="https://github.com/Luma-Programming-Language/Luma" target="_blank" class="header-link">
                 <span>GitHub</span>
@@ -24,10 +32,19 @@
             </a>
         </div>
         <div class="header-controls">
+            <button class="mobile-search-btn" onclick="toggleMobileSearch()">🔍</button>
             <button class="mobile-menu-btn" onclick="toggleSidebar()">☰ Menu</button>
             <button class="theme-toggle" onclick="toggleTheme()">🌙 Dark</button>
         </div>
     </header>
+    
+    <div class="mobile-search-overlay" id="mobileSearchOverlay">
+        <div class="mobile-search-container">
+            <input type="text" id="mobileSearchInput" placeholder="Search documentation..." class="mobile-search-input">
+            <button class="mobile-search-close" onclick="toggleMobileSearch()">✕</button>
+        </div>
+        <div id="mobileSearchResults" class="mobile-search-results"></div>
+    </div>
 
     <div class="container">
         <aside class="sidebar" id="sidebar">
@@ -46,5 +63,6 @@
     <button class="scroll-top" id="scrollTop" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">↑</button>
 
     <script src="script.js"></script>
+    <script src="highlight.js"></script>
 </body>
 </html>
